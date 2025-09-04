@@ -7,6 +7,22 @@ const OpenAI = require("openai");
 require("dotenv").config();
 
 const app = express();
+
+// Middleware global de CORS
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*"); // libera todas as origens
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // Responde preflight OPTIONS automaticamente
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
+
+
 const upload = multer({ storage: multer.memoryStorage() }); // 👈 memória
 
 // Cliente OpenAI
