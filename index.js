@@ -10,9 +10,16 @@ function sanitizeLLMJson(raw) {
   if (!raw || typeof raw !== "string") return raw;
 
   return raw
-    .replace(/\u0000/g, "")      // null
-    .replace(/\u0008/g, "")      // backspace
-    .replace(/\u000c/g, "")      // form feed
+    // normaliza unicode (REMOVE variações perigosas)
+    .normalize("NFKC")
+
+    // remove caracteres de controle invisíveis
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+
+    // remove separadores de linha unicode (matam JSON)
+    .replace(/\u2028|\u2029/g, "")
+
+    // escapa quebras
     .replace(/\r/g, "\\r")
     .replace(/\n/g, "\\n")
     .replace(/\t/g, "\\t");
