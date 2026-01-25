@@ -6,6 +6,18 @@ const xlsx = require("xlsx");
 const OpenAI = require("openai");
 require("dotenv").config();
 
+function sanitizeLLMJson(raw) {
+  if (!raw || typeof raw !== "string") return raw;
+
+  return raw
+    .replace(/\u0000/g, "")      // null
+    .replace(/\u0008/g, "")      // backspace
+    .replace(/\u000c/g, "")      // form feed
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n")
+    .replace(/\t/g, "\\t");
+}
+
 const app = express();
 
 // Middleware global de CORS
@@ -76,24 +88,47 @@ ${fileText}`;
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "Você é um extrator de dados que responde sempre em JSON válido." },
+       {role: "system",
+        content: `
+      Você é um extrator de dados.
+      REGRAS DE JSON (OBRIGATÓRIAS):
+      - Retorne APENAS JSON válido.
+      - Todas as strings DEVEM escapar caracteres de controle.
+      - Quebras de linha DEVEM ser representadas como \\n
+      - Tabs como \\t
+      - Aspas internas como \"
+      - Nunca utilize quebras de linha reais dentro de strings.
+      `},
         { role: "user", content: prompt }
       ],
       temperature: 0
     });
 
-    let extracted = response.choices[0].message.content;
+let extractedRaw = response.choices[0].message.content;
 
-    try {
-      extracted = JSON.parse(extracted);
-    } catch (err) {
-      const match = extracted.match(/\{[\s\S]*\}/);
-      if (match) {
-        extracted = JSON.parse(match[0]);
-      } else {
-        throw new Error("Falha ao converter resposta em JSON");
-      }
-    }
+// 1️⃣ sanitiza sempre
+let sanitized = sanitizeLLMJson(extractedRaw);
+
+// 2️⃣ tenta parse direto
+try {
+  extracted = JSON.parse(sanitized);
+} catch (err1) {
+
+  // 3️⃣ tenta extrair somente o bloco JSON
+  const match = sanitized.match(/\{[\s\S]*\}/);
+
+  if (!match) {
+    throw new Error("Resposta do modelo não contém JSON");
+  }
+
+  try {
+    extracted = JSON.parse(match[0]);
+  } catch (err2) {
+    console.error("JSON bruto:", extractedRaw);
+    console.error("JSON sanitizado:", sanitized);
+    throw new Error("JSON inválido após sanitização");
+  }
+}
 
     res.json(extracted);
   } catch (error) {
