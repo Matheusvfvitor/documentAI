@@ -1,23 +1,16 @@
-# Imagem base oficial Node
 FROM node:20-alpine
 
-# Definir diretório de trabalho
 WORKDIR /app
 
-# Copiar arquivos de dependência primeiro (cache de build)
 COPY package*.json ./
 
-# Instalar dependências
-RUN npm install --production
+RUN npm install --omit=dev --no-audit --no-fund
 
-# Copiar restante da aplicação
 COPY . .
 
-# Definir variável de ambiente padrão (pode ser sobrescrita pelo EasyPanel)
+ENV NODE_ENV=production
 ENV PORT=3000
 
-# Expor a porta configurada
-EXPOSE $PORT
+EXPOSE 3000
 
-# Start
-CMD ["node", "index.js"]
+CMD ["npm", "start"]
