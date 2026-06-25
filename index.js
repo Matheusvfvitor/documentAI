@@ -699,6 +699,7 @@ return condicionantes.map((item, index) => {
     )
   };
 });
+}
 
 function findMissingUids(batch, extracted) {
   const expected = new Set((batch.items || []).map((item) => item.uid));
