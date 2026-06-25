@@ -60,6 +60,19 @@ function sanitizeLLMJson(raw = "") {
     .trim();
 }
 
+function normalizeUid(value) {
+  if (!value) return null;
+
+  const text = String(value).trim().toLowerCase();
+  const match = text.match(/c\d{1,6}/);
+
+  if (!match) return null;
+
+  const number = match[0].replace("c", "");
+
+  return `c${number.padStart(3, "0")}`;
+}
+
 function parseLLMJson(raw, label = "resposta") {
   const sanitized = sanitizeLLMJson(raw);
 
@@ -661,12 +674,24 @@ ${fileText}
     ]
   });
 
-  const condicionantes = Array.isArray(result.condicionantes) ? result.condicionantes : [];
+const condicionantes = Array.isArray(result.condicionantes) ? result.condicionantes : [];
 
-  return condicionantes.map((item) => ({
-    uid: item.uid || null,
-    ...normalizeCondicionante(item, dadosGerais)
-  }));
+return condicionantes.map((item, index) => {
+  const expectedItem = batch.items[index];
+
+  return {
+    uid: normalizeUid(item.uid) || expectedItem?.uid || null,
+    ...normalizeCondicionante(
+      {
+        ...item,
+        numero: item.numero ?? expectedItem?.numero ?? "sn",
+        tipo: item.tipo ?? expectedItem?.tipo ?? "outro"
+      },
+      dadosGerais
+    )
+  };
+});
+  
 }
 
 function findMissingUids(batch, extracted) {
