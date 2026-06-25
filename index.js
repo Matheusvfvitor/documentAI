@@ -678,9 +678,17 @@ const condicionantes = Array.isArray(result.condicionantes) ? result.condicionan
 
 return condicionantes.map((item, index) => {
   const expectedItem = batch.items[index];
+  const uidFromModel = normalizeUid(item.uid);
+  const uid = uidFromModel || expectedItem?.uid || null;
+
+  if (!uidFromModel && expectedItem?.uid) {
+    console.warn(
+      `[batch ${batch.batchNumber}] UID ausente no item ${index + 1}; reassociando por posição: ${expectedItem.uid}`
+    );
+  }
 
   return {
-    uid: normalizeUid(item.uid) || expectedItem?.uid || null,
+    uid,
     ...normalizeCondicionante(
       {
         ...item,
@@ -691,12 +699,15 @@ return condicionantes.map((item, index) => {
     )
   };
 });
-  
-}
 
 function findMissingUids(batch, extracted) {
   const expected = new Set((batch.items || []).map((item) => item.uid));
-  const found = new Set((extracted || []).map((item) => item.uid).filter(Boolean));
+
+  const found = new Set(
+    (extracted || [])
+      .map((item) => normalizeUid(item.uid))
+      .filter(Boolean)
+  );
 
   return [...expected].filter((uid) => !found.has(uid));
 }
